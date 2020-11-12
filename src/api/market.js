@@ -5,3 +5,7 @@ export function getGoods(data) {
     data: data
   })
 }
+
+export function getCategories(data) {
+  return request('market/categories')
+}
