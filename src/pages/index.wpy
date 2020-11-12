@@ -1,48 +1,128 @@
+<style lang="less">
+  .weui-media-box__info__meta {
+    margin: 0;
+    font-size: 12px;
+  }
+  .topic-info {
+    margin-top: 5px;
+  }
+  .topic-title {
+    white-space: normal;
+    font-size: 14px;
+  }
+  .avatar {
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 50px;
+    height: 50px;
+  }
+  .reply-count {
+    background-color: #d8d8d8;
+    float: right;
+  }
+</style>
 <template>
 <div class="page">
   <div class="page__bd">
     <div class="weui-panel weui-panel_access">
-      <div class="weui-panel__hd">话题列表</div>
       <div class="weui-panel__bd">
-        <div v-for="topic in topics">
+        <div v-for="good in goods" :key="good.id">
           <a url="" class="weui-media-box weui-media-box_appmsg" hover-class="weui-cell_active">
             <div class="weui-media-box__hd weui-media-box__hd_in-appmsg">
-              <image class="weui-media-box__thumb" src="https://s2.ax1x.com/2019/03/05/kXNfS0.png" />
+              <image class="avatar" :src="good.user.avatar" />
             </div>
             <div class="weui-media-box__bd weui-media-box__bd_in-appmsg">
-              <div class="weui-media-box__title">{{ topic.title }}</div>
-              <div class="weui-media-box__desc">{{ topic.body }}</div>
+              <div class="weui-media-box__title good-title">{{ good.title }}</div>
+
+              <div class="weui-media-box__info good-info">
+                <div class="weui-media-box__info__meta">{{ good.category.name }} • </div>
+                <div class="weui-media-box__info__meta">{{ good.user.name }} • </div>
+                <div class="weui-media-box__info__meta">{{ good.updated_at }}</div>
+              </div>
             </div>
+            <div class="weui-badge reply-count">{{ good.reply_count }}</div>
           </a>
+        </div>
+        <div class="weui-loadmore weui-loadmore_line" v-if="noMoreData">
+          <div class="weui-loadmore__tips weui-loadmore__tips_in-line">没有更多数据</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 </template>
-
+<config>
+  {
+    enablePullDownRefresh: true,
+  }
+</config>
 <script>
   import wepy from '@wepy/core'
+  import { getGoods } from '@/api/good'
 
   wepy.page({
     data: {
-      topics: [{
-        id: 1,
-        title: '测试1',
-        body: '测试内容1'
-      }, {
-        id: 2,
-        title: '测试2',
-        body: '测试内容2'
-      }, {
-        id: 3,
-        title: '测试3',
-        body: '测试内容3'
-      }, {
-        id: 4,
-        title: '测试4',
-        body: '测试内容4'
-      }]
+      // 话题数据
+      goods: [],
+      // 当前分页
+      page: 1,
+      isLoading: false,
+    },
+    async onLoad() {
+      this.loadGoods()
+    },
+    async onPullDownRefresh() {
+      await this.loadGoods(true)
+      wx.stopPullDownRefresh()
+    },
+    async onReachBottom () {
+      // 如果没有更多内容，直接返回
+      if (this.noMoreData) {
+        return
+      }
+      this.isLoading = true
+      this.page += 1
+      await this.loadGoods()
+      this.isLoading = false
+    },
+    methods: {
+      // 获取数据
+      async loadGoods(reset = false) {
+        // 请求话题列表接口
+        const goodsResponse = await getGoods({
+          page: this.page,
+          include: 'user,category'
+        })
+
+        // 将数据合并到 this.goods
+        this.goods = reset ? goodsResponse.data.data : this.goods.concat(goodsResponse.data.data)
+
+        const pagination = goodsResponse.data.meta
+
+        // 根据分页设置是否还有更多数据
+        if (pagination.current_page === pagination.last_page) {
+          this.noMoreData = true
+        }
+      }
+    },
+    methods: {
+      // 获取数据
+      async loadGoods(reset = false) {
+        if (reset) {
+          this.page = 1
+        }
+
+        // 请求商品列表接口
+        const goodsResponse = await getGoods({
+          page: this.page,
+          include: 'user,category'
+        })
+
+        // 将数据合并到 this.goods
+        this.goods = reset ? goodsResponse.data.data : this.goods.concat(goodsResponse.data.data)
+      }
     }
+
   })
 </script>
